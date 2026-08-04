@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  # Local Object Storage (GCS/S3 replacement)
+  minio:
+    image: minio/minio:latest
+    container_name: local-cloud-storage
+    ports:
+      - "9000:9000" # S3/GCS API port
+      - "9001:9001" # MinIO Web Console UI
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadminpassword"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
