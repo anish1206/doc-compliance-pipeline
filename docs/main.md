@@ -1,110 +1,168 @@
-### The Real-World Business Purpose (Why This App Exists)
+# Master Project Architecture & Navigation Plan
 
-Imagine you work for **Global Bank Corp**.
+**Project Title:** *An Automated Hybrid Cloud Platform for Document Compliance, Storage Tiering, and PII Intelligence*  
+**Document Purpose:** Single Source of Truth (SSOT) & Navigation Document for Project Execution
 
-Global Bank has hundreds of regional branch offices. Every day, bank tellers scan customer documents: loan applications, tax forms, ID copies, and handwritten notes.
+---
 
-#### **The Risk:**
+## 1. Executive Summary & Real-World Business Context
 
-Under privacy laws (like GDPR), storing unencrypted customer credit card numbers or Social Security Numbers (SSNs) in an open folder is illegal. If a bank teller accidentally uploads a PDF containing an unmasked credit card number, **the bank faces huge regulatory fines**.
+### The Business Problem
 
-#### **The Solution (Your Project):**
+Enterprise organizations (banks, law firms, healthcare providers) receive thousands of unstructured documents daily (scanned IDs, invoices, loan applications, contracts).
 
-You are building an **Automated Compliance Engine**:
+Under international privacy regulations (GDPR, HIPAA), storing unencrypted **Personally Identifiable Information (PII)**—such as Credit Card numbers or Social Security Numbers (SSNs)—in unmonitored storage violates compliance laws and results in severe regulatory fines.
 
-- A bank teller opens the local **Branch Web UI** (HTML/CSS/JS) and drops a scanned PDF.
-- The file is uploaded to the **Inbox Bucket**.
-- A **Serverless Function** automatically wakes up, extracts text from the PDF, and scans for sensitive PII (credit cards, SSNs, sensitive keywords).
-- **Classification & Action:**
-  - If sensitive PII is found ->Flags as RESTRICTED, encrypts the PDF, and moves it to the **Archive Bucket**.
-  - If no PII is found -> Flags as PUBLIC and moves to standard storage.
-- Metadata (file name, classification, PII detected, timestamp) is written to **Cloud Firestore**.
-- The teller's browser dashboard immediately updates with a green or red compliance status badge!
+### The Solution Architecture
+
+This project implements an automated, secure **Hybrid Cloud Compliance & Analytics Pipeline**:
+
+1. **Edge Ingestion:** Branch office employees upload documents via a lightweight local Web Portal.
+2. **Local Storage & Ingestion:** Files land in a standard ingestion object storage bucket managed locally via **MinIO**.
+3. **Serverless Compliance Inspection:** An event-driven serverless function (`functions-framework`) automatically wakes up, extracts text using Python (`pypdf`), and executes Regex PII scanning rules.
+4. **Automated Data Tiering & Encryption:**
+  - **Restricted Data:** Files containing PII are encrypted (AES-256) and moved to a long-term **Cold Storage Archive Bucket**.
+  - **Public Data:** Clean files are classified as `PUBLIC` and routed to standard storage.
+5. **Real-time NoSQL Indexing:** File metadata, risk classifications, and detected PII tags are indexed instantly in **Google Cloud Firestore** (Firebase Spark Plan) for live dashboard display.
+6. **Enterprise Analytics & Reporting:** Compliance logs are streamed into **BigQuery Sandbox** for analytical SQL reporting on compliance trends.
+
+---
+
+## 2. Complete Architecture Diagram
 
 ```mermaid
----
-config:
-  layout: fixed
----
-flowchart TB
- subgraph DevOps["1. Developer Workstation & DevOps"]
-        GitHub["GitHub Repository"]
-        Dev["Developer Laptop"]
-        GHA["GitHub Actions CI/CD Pipeline<br>- Run Python Regex Tests<br>- Validate Terraform IaC"]
-  end
- subgraph MinIO["MinIO Local Object Storage (Docker)"]
-        Inbox["inbox-bucket<br>(Raw Uploads Landing Zone)"]
-        Archive["archive-bucket<br>(Encrypted Archive Zone)"]
-  end
- subgraph LocalEdge["2. Local Edge Sandbox (Simulated Bank Branch)"]
-        UI["Web Browser<br>(HTML5 / CSS3 / Vanilla JS UI)"]
-        Flask["Flask Backend API Container<br>(Python Web Server)"]
-        MinIO
-        Scanner["Serverless Document Scanner Container<br>(Python functions-framework)<br>- pypdf Text Extraction<br>- Regex PII Detector (SSN/Credit Cards)<br>- Encrypts &amp; Tiering"]
-  end
- subgraph IaC["Infrastructure as Code"]
-        TF["Terraform IaC"]
-  end
- subgraph PublicCloud["3. Public Cloud (Google Firebase - $0 Spark Plan)"]
-        Firestore[("Cloud Firestore NoSQL Database<br>- Document ID<br>- Classification (RESTRICTED/PUBLIC)<br>- PII Detected Flags<br>- Archive Path &amp; Timestamp")]
-  end
-    Dev -- git push --> GitHub
-    GitHub -- Triggers CI/CD --> GHA
-    UI -- "1. Upload File" --> Flask
-    Flask -- "2. Store Raw PDF" --> Inbox
-    Inbox -. "3. File Arrival Trigger" .-> Scanner
-    Scanner -- "4. Encrypt & Move PDF" --> Archive
-    TF -- Provisions Buckets --> MinIO
-    Scanner -- "5. Write Document Metadata" --> Firestore
-    UI -. "6. Fetch Status & Render Badge" .-> Firestore
+flowchart TD
+    subgraph DEV ["0. DevOps & Infrastructure as Code"]
+        GH["GitHub Repository"] -->|git push| GHA["GitHub Actions CI/CD Pipeline"]
+        GHA -->|Automated Unit Tests| PYTEST["Python Regex PII Tests"]
+        TF["HashiCorp Terraform"] -->|Local IaC Provisioning| MINIO_RES["MinIO Buckets: inbox-bucket & archive-bucket"]
+    end
 
-     Dev:::devStyle
-     GitHub:::devStyle
-     GHA:::devStyle
-     UI:::localStyle
-     Flask:::localStyle
-     Inbox:::storageStyle
-     Archive:::storageStyle
-     Scanner:::localStyle
-     Firestore:::cloudStyle
-    classDef devStyle fill:#1f2937,stroke:#60a5fa,color:#fff
-    classDef localStyle fill:#111827,stroke:#34d399,color:#fff
-    classDef cloudStyle fill:#1e1b4b,stroke:#a78bfa,color:#fff
-    classDef storageStyle fill:#374151,stroke:#f59e0b,color:#fff
+    subgraph EDGE ["1. On-Premises / Edge Sandbox (Local Laptop / VM)"]
+        UI["Web Frontend (HTML5 / CSS3 / Vanilla JS)"]
+        API["Flask Backend API (Docker Container)"]
+        UI -->|1. POST Upload PDF| API
+        
+        API -->|2. S3/GCS API Upload| INBOX["MinIO Inbox Bucket (Standard Tier)"]
+        
+        K8S["Local Kubernetes Cluster (K3s / Minikube)"]
+        K8S -.->|Orchestrates| API
+        K8S -.->|Orchestrates| FUNC
+        
+        FUNC["Serverless Scanner (Python functions-framework)"]
+        INBOX -->|3. Trigger Event| FUNC
+        
+        FUNC -->|4a. Extract Text & Regex PII Scan| FUNC
+        FUNC -->|4b. AES-256 Encrypt & Move| ARCHIVE["MinIO Archive Bucket (Cold Tier)"]
+    end
+
+    subgraph CLOUD ["2. Public Cloud Tier (Google Cloud Platform / Firebase)"]
+        FS[("Google Cloud Firestore (NoSQL DB)\n- Firebase Spark Plan - $0")]
+        BQ[("Google BigQuery Sandbox\n- SQL Analytics Warehouse - $0")]
+        
+        FUNC -->|5. Write Metadata JSON| FS
+        FUNC -->|6. Stream Compliance Logs| BQ
+        UI <-->|7. Real-time Status Query| FS
+    end
 ```
 
-### Trace a Single File (The Step-by-Step Story)
+---
 
-Let's trace what happens when bank teller "John" uploads loan_application.pdf:
+## 3. Technology Stack & Component Breakdown
 
-- **Upload:** John opens [http://localhost:5000](http://localhost:5000) on his browser, selects loan_application.pdf, and clicks "Upload".
-- **Relay:** The **HTML/JS UI** sends the file via a POST request to the **Flask Backend API**.
-- **Inbox Landing:** Flask writes loan_application.pdf into the local inbox-bucket inside **MinIO** (which was created automatically by our **Terraform** script!).
-- **Serverless Trigger:** The **Serverless Document Scanner** (Python functions-framework) detects the new file in inbox-bucket.
-- **PII Analysis:** The scanner extracts text from the PDF using Python (pypdf) and runs **Regex patterns**:
-  - Result: Found a 16-digit string matching a Visa card format!
-- **Archiving & Encrypting:** The scanner flags the file as RESTRICTED, encrypts the PDF payload, moves it into archive-bucket, and deletes the raw file from inbox-bucket.
-- **Metadata Indexing:** The scanner connects to **Firebase Cloud Firestore** over HTTPS and writes a record:
-  codeJSON
-  ```plaintext
-  {
-    "filename": "loan_application.pdf",
-    "classification": "RESTRICTED",
-    "pii_detected": ["CREDIT_CARD"],
-    "timestamp": "2026-08-04T18:15:00Z",
-    "status": "ARCHIVED"
-  }
+<table>
+  <tr><th>Layer</th><th>Selected Technology</th><th>Role in System</th></tr>
+  <tr><td>Frontend UI</td><td>HTML5, CSS3, Vanilla JavaScript</td><td>Pure client-side UI using native fetch() API for uploads and live status polling.</td></tr>
+  <tr><td>Backend API</td><td>Python Flask</td><td>Lightweight API server handling upload relays, containerized in Docker.</td></tr>
+  <tr><td>Local Object Storage</td><td>MinIO Container</td><td>S3/GCS-compatible object storage managing inbox-bucket and archive-bucket.</td></tr>
+  <tr><td>Serverless Compute</td><td>Python functions-framework</td><td>Event-driven microservice executing PDF parsing (pypdf), PII Regex, and AES encryption.</td></tr>
+  <tr><td>NoSQL Metadata DB</td><td>Google Cloud Firestore</td><td>Live cloud document database tracking document status on the Firebase Spark Plan ($0).</td></tr>
+  <tr><td>Data Warehouse</td><td>Google BigQuery Sandbox</td><td>Serverless SQL data warehouse for executing aggregate compliance analytical queries ($0).</td></tr>
+  <tr><td>Container Orchestration</td><td>Docker &amp; Kubernetes (K3s/Minikube)</td><td>Local microservice container management, deployments, and services configuration.</td></tr>
+  <tr><td>Infrastructure as Code</td><td>HashiCorp Terraform</td><td>Declarative HCL scripts automating local storage bucket creation and IAM policies.</td></tr>
+  <tr><td>CI/CD &amp; DevOps</td><td>GitHub &amp; GitHub Actions</td><td>Version control and automated Python testing pipelines for PII detection logic.</td></tr>
+</table>
 
-  ```
-- **Real-time Display:** The **Vanilla JS frontend** fetches the status from Firestore and displays:  
-**loan_application.pdf - RESTRICTED (Credit Card Detected) - Archived Safely**.
+---
 
-### Tech Stack
+## 4. Syllabus Mapping & Academic Alignment
 
-- **HTML / CSS / Vanilla JavaScript:** The visual web page running in the browser where users drop files and view compliance reports.
-- **Python Flask API:** The lightweight backend web server that bridges the browser UI with our local storage.
-- **Docker & Docker Compose:** Runs MinIO, Flask, and the Serverless Scanner in isolated containers on your laptop.
-- **MinIO:** Our local Object Storage server (acts like GCP Cloud Storage) to hold raw and archived PDFs.
-- **Terraform:** The Infrastructure-as-Code tool that automatically sets up inbox-bucket and archive-bucket inside MinIO with one command.
-- **Firebase Cloud Firestore:** The live NoSQL cloud database storing lightweight JSON search records (free $0 Spark plan).
-- **GitHub & GitHub Actions (CI/CD):** Where your code lives. When you push updates to GitHub, GitHub Actions runs automated Python tests to verify your PII scanner regex works without errors
+<table>
+  <tr><th>Syllabus Unit</th><th>Practical Implementation in This Architecture</th></tr>
+  <tr><td>Unit-I: Cloud Architecture</td><td>Hybrid Cloud Model: On-premises edge infrastructure (Docker/MinIO) seamlessly integrated with public cloud database endpoints (Firestore / BigQuery).</td></tr>
+  <tr><td>Unit-II: Virtualization</td><td>OS &amp; Hypervisor Virtualization: Docker runtime execution hosting isolated containers, optionally running inside a VirtualBox Linux VM.</td></tr>
+  <tr><td>Unit-III: Cloud Services &amp; Containers</td><td>Microservices &amp; Serverless: Local Kubernetes cluster (K3s/Minikube) managing container deployments; Serverless event-driven execution via functions-framework.</td></tr>
+  <tr><td>Unit-IV: Cloud Storage &amp; Analytics</td><td>Data Tiering &amp; OLAP Analytics: Multi-tier storage (MinIO Standard vs Archive), NoSQL document indexing (Firestore), and Big Data SQL queries (BigQuery Sandbox).</td></tr>
+  <tr><td>Unit-V: DevOps &amp; Service Management</td><td>IaC &amp; CI/CD Pipelines: Infrastructure provisioning via Terraform scripts; Continuous Integration workflows via GitHub Actions.</td></tr>
+  <tr><td>Unit-VI: Security &amp; Networking</td><td>Least Privilege &amp; Data Protection: MinIO S3 JSON IAM policies, Firestore security rules, client-side AES encryption, .gitignore secret isolation, and $0 budget enforcement.</td></tr>
+</table>
+
+---
+
+## 5. Sequential Master Execution Roadmap
+
+### Phase 1: Local Cloud Baseline & Safety Setup *(COMPLETED)*
+
+- [x] Verified Git, Docker, Python 3, and Terraform CLI installations.
+- [x] Created Firebase Project on $0 Spark Plan (No Credit Card).
+- [x] Downloaded and secured `firebase-key.json` inside `.gitignore` secrets directory.
+
+### Phase 2: Infrastructure as Code (Terraform + MinIO) *(COMPLETED & VERIFIED)*
+
+- [x] Created `docker-compose.yml` for local MinIO Object Storage (`http://localhost:9001`).
+- [x] Wrote `terraform/main.tf` using HashiCorp MinIO Provider.
+- [x] Executed `terraform apply` to provision `inbox-bucket` and `archive-bucket`.
+
+### Phase 3: Serverless Document Scanner & PII Detector *(NEXT IMMEDIATE STEP)*
+
+- [ ] Set up Python `functions-framework` serverless microservice.
+- [ ] Write PDF text extraction module using `pypdf`.
+- [ ] Implement Regex scanning algorithms for:
+  - Credit Cards (16-digit pattern)
+  - Social Security / National IDs
+  - Sensitive keywords (`CONFIDENTIAL`, `RESTRICTED`, `PASSPORT`).
+- [ ] Implement AES payload encryption before archiving files to `archive-bucket`.
+- [ ] Connect Python scanner to Firestore to write compliance metadata JSON records.
+
+### Phase 4: Edge Web Application (Flask + HTML/CSS/JS)
+
+- [ ] Build Flask backend API endpoints (`/upload`, `/status`).
+- [ ] Build pure HTML5/CSS3/Vanilla JS frontend with drag-and-drop file upload.
+- [ ] Connect JS `fetch()` calls to Flask API and live Firestore updates.
+- [ ] Package Web Application into a standalone Docker container.
+
+### Phase 5: Local Kubernetes (K3s / Minikube) Orchestration
+
+- [ ] Write Kubernetes manifest files:
+  - `deployment.yaml` for Flask Backend and Scanner microservices.
+  - `service.yaml` to expose NodePort/ClusterIP endpoints.
+  - `configmap.yaml` & `secret.yaml` for environment variable injection.
+- [ ] Deploy and verify cluster health using `kubectl`.
+
+### Phase 6: Granular IAM Policies & BigQuery Analytics
+
+- [ ] Write MinIO JSON IAM Access Policies (`UploaderPolicy` vs `ArchiverPolicy`).
+- [ ] Write Firestore Granular Database Security Rules.
+- [ ] Enable BigQuery Sandbox ($0 Plan) and create compliance dataset.
+- [ ] Write SQL analytical queries for compliance reporting.
+
+### Phase 7: DevOps CI/CD & Final Project Verification
+
+- [ ] Create GitHub repository and commit clean project structure.
+- [ ] Write `.github/workflows/ci.yml` for automated Python unit testing on PII regex rules.
+- [ ] End-to-end verification and preparation of project documentation and demo presentation.
+
+---
+
+## 6. Daily Workstation Lifecycle Commands
+
+- **To start local cloud storage:**  
+`docker compose up -d`
+- **To provision storage buckets:**  
+`cd terraform && terraform apply -auto-approve`
+- **To clean shutdown at the end of the day:**  
+`cd terraform && terraform destroy -auto-approve && cd .. && docker compose down`
+
+---
+
+*This document serves as our finalized, single source of truth for the entire project lifecycle.*
