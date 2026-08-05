@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Enterprise Document Compliance Sentinel — Hybrid Cloud PII Scanner and automated storage tiering for regulatory compliance.">
+    <title>Enterprise Document Compliance Sentinel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Global Nav -->
+    <nav class="global-nav" id="globalNav" role="navigation" aria-label="Global navigation">
+        <div class="global-nav__inner">
+            <div class="global-nav__brand" aria-label="Document Compliance Sentinel">
+                <svg class="global-nav__logo" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M10 1.5L2.5 5.25V10.5C2.5 14.25 5.75 17.75 10 18.5C14.25 17.75 17.5 14.25 17.5 10.5V5.25L10 1.5Z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path d="M7 10L9 12L13 8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="global-nav__wordmark">Sentinel</span>
+            </div>
+            <ul class="global-nav__links" role="list">
+                <li><a class="global-nav__link" href="#scan">Scan</a></li>
+                <li><a class="global-nav__link" href="#audit">Audit Log</a></li>
+                <li><a class="global-nav__link" href="#about">About</a></li>
+            </ul>
+            <button class="global-nav__hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Sub-nav (frosted) -->
+    <div class="sub-nav" id="subNav" role="navigation" aria-label="Section navigation">
+        <div class="sub-nav__inner">
+            <span class="sub-nav__category">Compliance Portal</span>
+            <div class="sub-nav__actions">
+                <a class="sub-nav__link" href="#scan">Upload</a>
+                <a class="sub-nav__link" href="#audit">Audit Log</a>
+                <a class="btn btn--primary" href="#scan" id="subNavCta">Scan Document</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile nav tray -->
+    <div class="nav-tray" id="navTray" aria-hidden="true">
+        <ul class="nav-tray__links" role="list">
+            <li><a class="nav-tray__link" href="#scan">Scan</a></li>
+            <li><a class="nav-tray__link" href="#audit">Audit Log</a></li>
+            <li><a class="nav-tray__link" href="#about">About</a></li>
+        </ul>
+    </div>
+
+    <main id="main-content">
+
+        <!-- Hero Tile (Light) -->
+        <section class="tile tile--light" id="about" aria-labelledby="heroHeadline">
+            <div class="tile__inner tile__inner--centered">
+                <p class="tile__eyebrow">Hybrid Cloud · PII · Compliance</p>
+                <h1 class="tile__headline" id="heroHeadline">Enterprise Document<br>Compliance Sentinel.</h1>
+                <p class="tile__tagline">Serverless text extraction and automated PII detection—every document classified and stored in seconds.</p>
+                <div class="tile__ctas">
+                    <a class="btn btn--primary" href="#scan" id="heroLearnMore">Scan a Document</a>
+                    <a class="btn btn--secondary-pill" href="#audit" id="heroAudit">View Audit Log</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Upload Section (Parchment Tile) -->
+        <section class="tile tile--parchment" id="scan" aria-labelledby="uploadHeadline">
+            <div class="tile__inner">
+                <div class="split-layout">
+                    <div class="split-layout__content">
+                        <h2 class="tile__headline" id="uploadHeadline">Upload Document<br>for Inspection.</h2>
+                        <p class="tile__tagline">Select or drag a PDF to trigger the serverless scan pipeline.</p>
+                    </div>
+
+                    <div class="split-layout__panel">
+                        <div class="upload-panel">
+                            <form id="uploadForm" class="upload-form" novalidate>
+                                <div class="file-drop-area" id="dropArea" role="button" tabindex="0" aria-label="Drop PDF file here or click to browse">
+                                    <div class="file-drop-area__icon" aria-hidden="true">
+                                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="8" y="4" width="20" height="28" rx="3" stroke="#2997ff" stroke-width="1.8"/>
+                                            <path d="M20 30V20M20 20L16 24M20 20L24 24" stroke="#2997ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M28 4V14H38" stroke="#2997ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M28 4L38 14" stroke="#2997ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <p class="file-msg" id="fileMsg">Drag &amp; Drop PDF here or <strong>browse</strong></p>
+                                    <p class="file-drop-area__hint">PDF files only</p>
+                                    <input type="file" id="fileInput" accept=".pdf" required aria-label="Select PDF file">
+                                </div>
+
+                                <div class="upload-actions">
+                                    <button type="submit" id="uploadBtn" class="btn btn--primary btn--large">Upload &amp; Scan Document</button>
+                                </div>
+                            </form>
+
+                            <div id="statusMessage" class="status-message status-message--hidden" role="alert" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audit Log Section (Light Tile) -->
+        <section class="tile tile--light" id="audit" aria-labelledby="auditHeadline">
+            <div class="tile__inner">
+                <div class="section-header">
+                    <div>
+                        <h2 class="tile__headline" id="auditHeadline">Compliance<br>Audit Log.</h2>
+                        <p class="tile__tagline">Live records from Cloud Firestore — every document scanned, classified and tiered.</p>
+                    </div>
+                    <button id="refreshBtn" class="btn btn--utility" aria-label="Refresh compliance log">
+                        <svg class="btn__icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12.5 7A5.5 5.5 0 1 1 7 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M7 1.5L9.5 4H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Refresh Log
+                    </button>
+                </div>
+
+                <div class="table-wrapper" role="region" aria-label="Compliance audit table" tabindex="0">
+                    <table class="data-table" id="auditTable">
+                        <thead>
+                            <tr>
+                                <th scope="col">Filename</th>
+                                <th scope="col">Classification</th>
+                                <th scope="col">Detected PII</th>
+                                <th scope="col">File Size</th>
+                                <th scope="col">Processed At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsTableBody">
+                            <tr>
+                                <td colspan="5" class="empty-msg">
+                                    <div class="empty-state">
+                                        <svg class="empty-state__icon" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <rect x="6" y="4" width="16" height="22" rx="2.5" stroke="#cccccc" stroke-width="1.5"/>
+                                            <path d="M10 10H18M10 14H18M10 18H14" stroke="#cccccc" stroke-width="1.5" stroke-linecap="round"/>
+                                        </svg>
+                                        <p>Loading compliance logs from Cloud Firestore…</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

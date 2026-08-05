@@ -56,5 +56,6 @@ override.tf.json
 # IDE and OS files
 .vscode/
 .idea/
+src/design.md
 .DS_Store
 Thumbs.db

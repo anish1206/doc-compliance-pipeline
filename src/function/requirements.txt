@@ -1,0 +1,5 @@
+functions-framework==3.5.0
+pypdf==4.1.0
+minio==7.2.5
+firebase-admin==6.5.0
+cryptography==42.0.5

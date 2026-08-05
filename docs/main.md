@@ -115,29 +115,29 @@ flowchart TD
 
 ### Phase 3: Serverless Document Scanner & PII Detector *(NEXT IMMEDIATE STEP)*
 
-- [ ] Set up Python `functions-framework` serverless microservice.
-- [ ] Write PDF text extraction module using `pypdf`.
-- [ ] Implement Regex scanning algorithms for:
+- [x] Set up Python `functions-framework` serverless microservice.
+- [x] Write PDF text extraction module using `pypdf`.
+- [x] Implement Regex scanning algorithms for:
   - Credit Cards (16-digit pattern)
   - Social Security / National IDs
   - Sensitive keywords (`CONFIDENTIAL`, `RESTRICTED`, `PASSPORT`).
-- [ ] Implement AES payload encryption before archiving files to `archive-bucket`.
-- [ ] Connect Python scanner to Firestore to write compliance metadata JSON records.
+- [x] Implement AES payload encryption before archiving files to `archive-bucket`.
+- [x] Connect Python scanner to Firestore to write compliance metadata JSON records.
 
 ### Phase 4: Edge Web Application (Flask + HTML/CSS/JS)
 
-- [ ] Build Flask backend API endpoints (`/upload`, `/status`).
-- [ ] Build pure HTML5/CSS3/Vanilla JS frontend with drag-and-drop file upload.
-- [ ] Connect JS `fetch()` calls to Flask API and live Firestore updates.
-- [ ] Package Web Application into a standalone Docker container.
+- [x] Build Flask backend API endpoints (`/upload`, `/status`).
+- [x] Build pure HTML5/CSS3/Vanilla JS frontend with drag-and-drop file upload.
+- [x] Connect JS `fetch()` calls to Flask API and live Firestore updates.
+- [x] Package Web Application into a standalone Docker container.
 
 ### Phase 5: Local Kubernetes (K3s / Minikube) Orchestration
 
-- [ ] Write Kubernetes manifest files:
+- [x] Write Kubernetes manifest files:
   - `deployment.yaml` for Flask Backend and Scanner microservices.
   - `service.yaml` to expose NodePort/ClusterIP endpoints.
   - `configmap.yaml` & `secret.yaml` for environment variable injection.
-- [ ] Deploy and verify cluster health using `kubectl`.
+- [x] Deploy and verify cluster health using `kubectl`.
 
 ### Phase 6: Granular IAM Policies & BigQuery Analytics
 

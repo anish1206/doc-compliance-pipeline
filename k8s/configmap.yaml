@@ -1,0 +1,10 @@
+# Stores environment variables so your code doesn't hardcode URLs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  MINIO_ENDPOINT: "host.docker.internal:9000"
+  SCANNER_API_URL: "http://scanner-service:8080"
+  FIREBASE_KEY_PATH: "/secrets/firebase-key.json"
+

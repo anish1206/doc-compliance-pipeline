@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scanner-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scanner
+  template:
+    metadata:
+      labels:
+        app: scanner
+    spec:
+      containers:
+      - name: scanner
+        image: doc-scanner:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: app-config
+        volumeMounts:
+        - name: firebase-key-volume
+          mountPath: /secrets
+          readOnly: true
+      volumes:
+      - name: firebase-key-volume
+        secret:
+          secretName: firebase-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scanner-service
+spec:
+  type: ClusterIP
+  selector:
+    app: scanner
+  ports:
+  - port: 8080
+    targetPort: 8080
