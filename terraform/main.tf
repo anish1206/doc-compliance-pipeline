@@ -35,3 +35,42 @@ output "inbox_bucket_name" {
 output "archive_bucket_name" {
   value = minio_s3_bucket.archive_bucket.bucket
 }
+
+# IAM Policy 1: Restricts Web App to PutObject ONLY on inbox-bucket
+resource "minio_iam_policy" "uploader_policy" {
+  name   = "uploader-least-privilege"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::inbox-bucket/*"]
+    }
+  ]
+}
+EOF
+}
+
+# IAM Policy 2: Restricts Scanner to Inbox Read/Delete & Archive Write
+resource "minio_iam_policy" "archiver_policy" {
+  name   = "archiver-least-privilege"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:DeleteObject"],
+      "Resource": ["arn:aws:s3:::inbox-bucket/*"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::archive-bucket/*"]
+    }
+  ]
+}
+EOF
+}
