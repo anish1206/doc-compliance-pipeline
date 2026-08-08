@@ -141,16 +141,16 @@ flowchart TD
 
 ### Phase 6: Granular IAM Policies & BigQuery Analytics
 
-- [ ] Write MinIO JSON IAM Access Policies (`UploaderPolicy` vs `ArchiverPolicy`).
-- [ ] Write Firestore Granular Database Security Rules.
+- [x] Write MinIO JSON IAM Access Policies (`UploaderPolicy` vs `ArchiverPolicy`).
+- [x] Write Firestore Granular Database Security Rules.
 - [ ] Enable BigQuery Sandbox ($0 Plan) and create compliance dataset.
 - [ ] Write SQL analytical queries for compliance reporting.
 
 ### Phase 7: DevOps CI/CD & Final Project Verification
 
-- [ ] Create GitHub repository and commit clean project structure.
-- [ ] Write `.github/workflows/ci.yml` for automated Python unit testing on PII regex rules.
-- [ ] End-to-end verification and preparation of project documentation and demo presentation.
+- [x] Create GitHub repository and commit clean project structure.
+- [x] Write `.github/workflows/ci.yml` for automated Python unit testing on PII regex rules.
+- [x] End-to-end verification and preparation of project documentation and demo presentation.
 
 ---
 

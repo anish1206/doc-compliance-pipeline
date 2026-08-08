@@ -21,38 +21,33 @@ This project implements an automated, secure **Hybrid Cloud Compliance & Analyti
 
 ```mermaid
 flowchart TD
-    subgraph DEV ["0. DevOps & Infrastructure as Code"]
-        GH["GitHub Repository"] -->|git push| GHA["GitHub Actions CI/CD Pipeline"]
-        GHA -->|Automated Unit Tests| PYTEST["Python Regex PII Tests"]
-        TF["HashiCorp Terraform"] -->|Local IaC Provisioning| MINIO_RES["MinIO Buckets: inbox-bucket & archive-bucket"]
+    subgraph CLIENT ["1. CLIENT DOMAIN (Browser)"]
+        UI["Web Browser\n(HTML5 / CSS3 / Vanilla JS)"]
     end
 
-    subgraph EDGE ["1. On-Premises / Edge Sandbox (Local Laptop / VM)"]
-        UI["Web Frontend (HTML5 / CSS3 / Vanilla JS)"]
-        API["Flask Backend API (Docker Container)"]
-        UI -->|1. POST Upload PDF| API
-        
-        API -->|2. S3/GCS API Upload| INBOX["MinIO Inbox Bucket (Standard Tier)"]
-        
-        K8S["Local Kubernetes Cluster (K3s / Minikube)"]
-        K8S -.->|Orchestrates| API
-        K8S -.->|Orchestrates| FUNC
-        
-        FUNC["Serverless Scanner (Python functions-framework)"]
-        INBOX -->|3. Trigger Event| FUNC
-        
-        FUNC -->|4a. Extract Text & Regex PII Scan| FUNC
-        FUNC -->|4b. AES-256 Encrypt & Move| ARCHIVE["MinIO Archive Bucket (Cold Tier)"]
+    subgraph K8S ["2. LOCAL KUBERNETES CLUSTER (Minikube)"]
+        APP["Web App Pod\n(Flask API Container)\nNodePort: 30500"]
+        SCANNER["Serverless Scanner Pod\n(functions-framework + pypdf)\nClusterIP: 8080"]
+        CFG["ConfigMap: app-config\nSecret: firebase-secret"]
     end
 
-    subgraph CLOUD ["2. Public Cloud Tier (Google Cloud Platform / Firebase)"]
-        FS[("Google Cloud Firestore (NoSQL DB)\n- Firebase Spark Plan - $0")]
-        BQ[("Google BigQuery Sandbox\n- SQL Analytics Warehouse - $0")]
-        
-        FUNC -->|5. Write Metadata JSON| FS
-        FUNC -->|6. Stream Compliance Logs| BQ
-        UI <-->|7. Real-time Status Query| FS
+    subgraph STORAGE ["3. LOCAL STORAGE TIER (MinIO)"]
+        INBOX["inbox-bucket\n(Standard Tier)"]
+        ARCHIVE["archive-bucket\n(AES Cold Tier)"]
     end
+
+    subgraph CLOUD ["4. PUBLIC CLOUD TIER (Google Firebase)"]
+        FS[("Cloud Firestore DB\nCollection: documents")]
+    end
+
+    UI -->|1. POST /api/upload| APP
+    APP -->|2. S3 API PutObject| INBOX
+    APP -->|3. Trigger http://scanner-service:8080| SCANNER
+    SCANNER -->|4. Get PDF & Regex Scan| INBOX
+    SCANNER -->|5. AES Encrypt & Save| ARCHIVE
+    SCANNER -->|6. Delete Raw PDF| INBOX
+    SCANNER -->|7. Write Metadata gRPC| FS
+    APP <-->|8. Query History| FS
 ```
 
 ---
@@ -73,12 +68,3 @@ flowchart TD
 </table>
 
 ---
-
-## Current Workstation Lifecycle Commands
-
-- **To start local cloud storage:**  
-`docker compose up -d`
-- **To provision storage buckets:**  
-`cd terraform && terraform apply -auto-approve`
-- **To clean shutdown at the end of the day:**  
-`cd terraform && terraform destroy -auto-approve && cd .. && docker compose down`

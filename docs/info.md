@@ -1,9 +1,56 @@
-Running project
+### How to Safely Stop Everything
 
-| Starting                                   | Closing                                                                                                                                                                 |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `root docker compose up -d `               | `root (Note: If you want to keep your MinIO uploaded files intact while stopping the container, you can run docker compose stop instead of down). docker compose down ` |
-| `terraform/ terraform apply -auto-approv ` | `terraform/ terraform destroy `                                                                                                                                         |
+When you finish working for the day, follow these 3 simple commands in order:
+
+**Step 1: Delete Kubernetes Resources**
+
+In your terminal inside the project root folder:
+
+```powershell
+kubectl delete -f k8s/
+```
+
+- **What it does:** Cleanly terminates the Scanner and Web App pods, deployments, and services from your Kubernetes cluster.
+
+**Step 2: Pause Minikube**
+
+```powershell
+minikube stop
+```
+
+- **What it does:** Safely pauses the Minikube cluster container, saving your CPU and RAM.
+
+**Step 3: Destroy Storage Buckets & Stop MinIO**
+
+```powershell
+cd terraform
+terraform destroy -auto-approve
+cd ..
+docker compose down
+```
+
+---
+
+### How to Bring Everything Back Up Next Time
+
+When you sit down to work on your project again:
+
+1. **Start MinIO & Provision Buckets:**
+  ```powershell
+  docker compose up -d
+  cd terraform
+  terraform apply -auto-approve
+  cd ..
+  ```
+2. **Start Minikube & Deploy Kubernetes Manifests:**
+  ```powershell
+  minikube start
+  kubectl apply -f k8s/
+  ```
+3. **Open the Web App in Browser:**
+  ```powershell
+  minikube service web-app-service
+  ```
 
 ---
 
@@ -37,3 +84,7 @@ How does Google do this? Google built an open-source tool called **functions-fra
   - Queries Cloud Firestore documents collection.
   - Retrieves all processed documents ordered by timestamp.
   - Returns a JSON array so JavaScript can render the live status table.
+
+---
+
+![image](./design/pasted_20260808-102900.png)
