@@ -10,23 +10,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const navHamburger        = document.getElementById("navHamburger");
     const navTray             = document.getElementById("navTray");
 
-    // ─── Hamburger / Mobile Nav ──────────────────────────────────
-    navHamburger.addEventListener("click", () => {
-        const isOpen = navTray.classList.toggle("is-open");
-        navHamburger.classList.toggle("is-open", isOpen);
-        navHamburger.setAttribute("aria-expanded", isOpen);
-        navTray.setAttribute("aria-hidden", !isOpen);
-    });
-
-    // Close tray when a tray link is tapped
-    navTray.querySelectorAll(".nav-tray__link").forEach(link => {
-        link.addEventListener("click", () => {
-            navTray.classList.remove("is-open");
-            navHamburger.classList.remove("is-open");
-            navHamburger.setAttribute("aria-expanded", false);
-            navTray.setAttribute("aria-hidden", true);
+    // ─── Hamburger / Mobile Nav (optional) ───────────────────────
+    if (navHamburger && navTray) {
+        navHamburger.addEventListener("click", () => {
+            const isOpen = navTray.classList.toggle("is-open");
+            navHamburger.classList.toggle("is-open", isOpen);
+            navHamburger.setAttribute("aria-expanded", isOpen);
+            navTray.setAttribute("aria-hidden", !isOpen);
         });
-    });
+
+        // Close tray when a tray link is tapped
+        navTray.querySelectorAll(".nav-tray__link").forEach(link => {
+            link.addEventListener("click", () => {
+                navTray.classList.remove("is-open");
+                navHamburger.classList.remove("is-open");
+                navHamburger.setAttribute("aria-expanded", false);
+                navTray.setAttribute("aria-hidden", true);
+            });
+        });
+    }
 
     // ─── Drag & Drop ─────────────────────────────────────────────
     dropArea.addEventListener("click", () => fileInput.click());

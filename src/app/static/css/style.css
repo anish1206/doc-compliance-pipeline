@@ -89,7 +89,7 @@
 
 html {
     scroll-behavior: smooth;
-    scroll-padding-top: calc(var(--nav-height) + var(--subnav-height));
+    scroll-padding-top: var(--subnav-height);
 }
 
 body {
@@ -219,7 +219,7 @@ a {
    ----------------------------------------------------------- */
 .sub-nav {
     position: fixed;
-    top: var(--nav-height);
+    top: 0;
     left: 0;
     right: 0;
     z-index: 800;
@@ -446,6 +446,28 @@ a {
 .tile--parchment {
     background-color: var(--color-canvas-parchment);
     color: var(--color-ink);
+}
+
+.tile--hero {
+    position: relative;
+    background-color: #e8f3fa;
+    background-image: 
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 70%, rgba(255, 255, 255, 0.35) 100%),
+        url('../background.png');
+    background-position: center bottom;
+    background-size: cover;
+    background-repeat: no-repeat;
+    min-height: 540px;
+    display: flex;
+    align-items: center;
+}
+
+.tile--hero .tile__headline {
+    text-shadow: 0 1px 8px rgba(255, 255, 255, 0.8), 0 2px 20px rgba(255, 255, 255, 0.6);
+}
+
+.tile--hero .tile__tagline {
+    text-shadow: 0 1px 6px rgba(255, 255, 255, 0.9);
 }
 
 .tile__inner {
@@ -836,7 +858,7 @@ a {
    14. OFFSET FOR FIXED NAV
    ----------------------------------------------------------- */
 #main-content {
-    padding-top: calc(var(--nav-height) + var(--subnav-height));
+    padding-top: var(--subnav-height);
 }
 
 /* -----------------------------------------------------------

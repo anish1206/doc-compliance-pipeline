@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "1e101368-726c-4132-8c2c-b7896a6f3744",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\ANISH\\OneDrive\\Desktop\\SEM 5\\CC\\doc-compliance-pipeline\\.archify\\architecture-doc-compliance-pipeline-20261023-184600\\candidate.json",
+  "output": "C:\\Users\\ANISH\\OneDrive\\Desktop\\SEM 5\\CC\\doc-compliance-pipeline\\.archify\\architecture-doc-compliance-pipeline-20261023-184600\\doc-compliance-pipeline.html",
+  "specification": {
+    "sha256": "fa46c0600bc20b56886c8f77ee728fbaa830b42cf7aa79f01fb002452f6a22c5",
+    "bytes": 7824
+  },
+  "artifact": {
+    "sha256": "881b4df437646bd2d36b8af8e36157c883fc2215568f7c4e2bc7333619392ce4",
+    "bytes": 830072
+  }
+}

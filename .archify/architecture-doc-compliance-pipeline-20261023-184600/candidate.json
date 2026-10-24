@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Document Compliance & Storage Tiering Pipeline Architecture",
+    "output": ".archify/architecture-doc-compliance-pipeline-20261023-184600/doc-compliance-pipeline.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/anish1206/doc-compliance-pipeline.git",
+      "provider": "github",
+      "revision": "ef0ff74af650d84722ef42f75d93cdb94272d52c"
+    },
+    "views": [
+      {
+        "id": "view-ingestion",
+        "label": "Ingestion & Upload Flow",
+        "focus": ["user", "webportal", "flaskapi", "inbox"],
+        "note": "Client uploads PDF via Web Portal; Flask ingests and stores raw file in MinIO inbox landing tier."
+      },
+      {
+        "id": "view-compliance",
+        "label": "Compliance & Encryption",
+        "focus": ["flaskapi", "scanner", "inbox", "archive"],
+        "note": "Serverless scanner extracts text, detects PII, purges raw upload, and encrypts into archive vault."
+      },
+      {
+        "id": "view-audit",
+        "label": "Cloud Audit & History",
+        "focus": ["flaskapi", "scanner", "firestore"],
+        "note": "Scanner records compliance audit logs and Flask queries live history from Cloud Firestore."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Compliance User",
+      "sublabel": "Web Browser Client",
+      "icon": "person",
+      "pos": [40, 200],
+      "size": [130, 64]
+    },
+    {
+      "id": "webportal",
+      "type": "frontend",
+      "label": "Web Portal UI",
+      "sublabel": "HTML5 / Vanilla JS",
+      "tag": "NodePort :30500",
+      "pos": [270, 200],
+      "size": [140, 64],
+      "sources": [
+        { "path": "src/app/template/index.html", "line": 1, "end_line": 95, "label": "Upload & Status UI" },
+        { "path": "src/app/static/js/app.js", "line": 1, "end_line": 78, "label": "Client controller" }
+      ]
+    },
+    {
+      "id": "flaskapi",
+      "type": "backend",
+      "label": "Flask Ingestion API",
+      "sublabel": "Python Flask :5000",
+      "tag": "Ingestion & Proxy",
+      "pos": [540, 200],
+      "size": [150, 64],
+      "sources": [
+        { "path": "src/app/app.py", "line": 48, "end_line": 103, "label": "Upload endpoint" },
+        { "path": "src/app/app.py", "line": 105, "end_line": 129, "label": "History endpoint" },
+        { "path": "k8s/web-app.yaml", "line": 1, "end_line": 45, "label": "K8s Deployment & Service" }
+      ]
+    },
+    {
+      "id": "scanner",
+      "type": "backend",
+      "label": "Serverless Scanner",
+      "sublabel": "functions-framework :8080",
+      "tag": "PII & Encryption",
+      "pos": [800, 200],
+      "size": [160, 64],
+      "sources": [
+        { "path": "src/function/main.py", "line": 21, "end_line": 64, "label": "PII Regex Rules" },
+        { "path": "src/function/main.py", "line": 138, "end_line": 196, "label": "Scan HTTP Handler" },
+        { "path": "k8s/scanner.yaml", "line": 1, "end_line": 43, "label": "Scanner Deployment" }
+      ]
+    },
+    {
+      "id": "inbox",
+      "type": "database",
+      "label": "MinIO Inbox Bucket",
+      "sublabel": "Raw PDF Landing Tier",
+      "tag": "S3 API :9000",
+      "pos": [540, 370],
+      "size": [150, 64],
+      "sources": [
+        { "path": "terraform/main.tf", "line": 19, "end_line": 22, "label": "inbox_bucket resource" },
+        { "path": "terraform/main.tf", "line": 40, "end_line": 54, "label": "uploader IAM policy" },
+        { "path": "docker-compose.yml", "line": 5, "end_line": 17, "label": "MinIO container service" }
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "database",
+      "label": "MinIO Archive Bucket",
+      "sublabel": "AES-256 Vault Tier",
+      "tag": "Cold Storage",
+      "pos": [800, 370],
+      "size": [160, 64],
+      "sources": [
+        { "path": "terraform/main.tf", "line": 25, "end_line": 28, "label": "archive_bucket resource" },
+        { "path": "terraform/main.tf", "line": 57, "end_line": 75, "label": "archiver IAM policy" },
+        { "path": "src/function/main.py", "line": 162, "end_line": 175, "label": "AES encryption & archive put" }
+      ]
+    },
+    {
+      "id": "firestore",
+      "type": "cloud",
+      "label": "Cloud Firestore",
+      "sublabel": "NoSQL Collection: documents",
+      "tag": "GCP ($0 Spark)",
+      "pos": [800, 50],
+      "size": [160, 64],
+      "sources": [
+        { "path": "src/function/main.py", "line": 177, "end_line": 191, "label": "Write compliance log" },
+        { "path": "src/app/app.py", "line": 105, "end_line": 124, "label": "Fetch documents list" },
+        { "path": "k8s/configmap.yaml", "line": 1, "end_line": 10, "label": "Firestore config injection" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Local Edge Host (Docker Engine)",
+      "wraps": ["webportal", "flaskapi", "scanner", "inbox", "archive"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Kubernetes Cluster (Minikube)",
+      "wraps": ["webportal", "flaskapi", "scanner"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-ui",
+      "from": "user",
+      "to": "webportal",
+      "label": "Uploads PDF",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ui-to-api",
+      "from": "webportal",
+      "to": "flaskapi",
+      "label": "POST /api/upload",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-to-inbox",
+      "from": "flaskapi",
+      "to": "inbox",
+      "label": "PutObject (raw)"
+    },
+    {
+      "id": "api-to-scanner",
+      "from": "flaskapi",
+      "to": "scanner",
+      "label": "POST /scan",
+      "variant": "emphasis"
+    },
+    {
+      "id": "scanner-to-inbox",
+      "from": "scanner",
+      "to": "inbox",
+      "label": "GetObject & Purge",
+      "variant": "dashed"
+    },
+    {
+      "id": "scanner-to-archive",
+      "from": "scanner",
+      "to": "archive",
+      "label": "PutObject (AES)",
+      "variant": "security"
+    },
+    {
+      "id": "scanner-to-firestore",
+      "from": "scanner",
+      "to": "firestore",
+      "label": "Write audit log"
+    },
+    {
+      "id": "api-to-firestore",
+      "from": "flaskapi",
+      "to": "firestore",
+      "label": "GET /api/documents",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Edge Ingestion Tier",
+      "items": [
+        "Web Portal UI (HTML5 / Vanilla JS) exposed externally via NodePort 30500",
+        "Flask backend handles multipart PDF ingestion and proxies requests to the scanner",
+        "Raw file streamed directly into MinIO S3 inbox-bucket upon receipt"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Serverless Compliance Engine",
+      "items": [
+        "Serverless worker built on Google functions-framework listening on ClusterIP 8080",
+        "Extracts in-memory text streams from PDF using pypdf without disk persistence",
+        "Inspects Indian PII (Aadhaar, PAN, UPI, IFSC) and Global PII (SSN, Cards, Passports)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Storage Tiering & Encryption",
+      "items": [
+        "MinIO S3-compatible object storage configured with separate isolated tiers",
+        "Temporary landing tier (inbox-bucket) is strictly purged after inspection",
+        "Cold storage vault (archive-bucket) retains files encrypted using symmetric AES (Fernet)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Hybrid Cloud & IaC Governance",
+      "items": [
+        "Cloud Firestore NoSQL database tracks real-time document compliance records ($0 Spark)",
+        "HashiCorp Terraform provisions storage buckets and least-privilege IAM JSON policies",
+        "Kubernetes Secrets (firebase-secret) isolate credentials from codebase and container images"
+      ]
+    }
+  ]
+}

@@ -1,68 +1,63 @@
-# Master Project Architecture & Navigation Plan
+# 📄 Master Project Architecture & Navigation Plan (Version 2.0)
 
-**Project Title:** *An Automated Hybrid Cloud Platform for Document Compliance, Storage Tiering, and PII Intelligence*  
-**Document Purpose:** Single Source of Truth (SSOT) & Navigation Document for Project Execution
+**Project Title:** *An Automated Hybrid Cloud Platform for Document Compliance, Asynchronous Processing, Storage Tiering, and PII Redaction*  
+**Document Purpose:** Single Source of Truth (SSOT) & Navigation Document for Project Execution  
+**Financial Guarantee:** $0.00 Total Cost (No Credit Card / Payment Info Required)
 
 ---
 
 ## 1. Executive Summary & Real-World Business Context
 
 ### The Business Problem
-
-Enterprise organizations (banks, law firms, healthcare providers) receive thousands of unstructured documents daily (scanned IDs, invoices, loan applications, contracts).
-
-Under international privacy regulations (GDPR, HIPAA), storing unencrypted **Personally Identifiable Information (PII)**—such as Credit Card numbers or Social Security Numbers (SSNs)—in unmonitored storage violates compliance laws and results in severe regulatory fines.
+Enterprise organizations (banks, healthcare providers, law firms) process thousands of unstructured documents daily (scanned IDs, invoices, tax forms, contracts). Storing unencrypted **Personally Identifiable Information (PII)**—such as Credit Cards, Social Security Numbers, Aadhaar, or PAN details—violates data privacy laws (GDPR, HIPAA) and results in severe financial penalties. Furthermore, synchronous file processing freezes user interfaces, causing poor performance and system timeouts.
 
 ### The Solution Architecture
-
-This project implements an automated, secure **Hybrid Cloud Compliance & Analytics Pipeline**:
-
-1. **Edge Ingestion:** Branch office employees upload documents via a lightweight local Web Portal.
-2. **Local Storage & Ingestion:** Files land in a standard ingestion object storage bucket managed locally via **MinIO**.
-3. **Serverless Compliance Inspection:** An event-driven serverless function (`functions-framework`) automatically wakes up, extracts text using Python (`pypdf`), and executes Regex PII scanning rules.
-4. **Automated Data Tiering & Encryption:**
-  - **Restricted Data:** Files containing PII are encrypted (AES-256) and moved to a long-term **Cold Storage Archive Bucket**.
-  - **Public Data:** Clean files are classified as `PUBLIC` and routed to standard storage.
-5. **Real-time NoSQL Indexing:** File metadata, risk classifications, and detected PII tags are indexed instantly in **Google Cloud Firestore** (Firebase Spark Plan) for live dashboard display.
-6. **Enterprise Analytics & Reporting:** Compliance logs are streamed into **BigQuery Sandbox** for analytical SQL reporting on compliance trends.
+This project implements an automated, asynchronous **Hybrid Cloud Compliance & Data Anonymization Pipeline**:
+1. **Edge Ingestion:** Users upload documents via a responsive HTML5/CSS3/Vanilla JS Web Portal served by a Flask API.
+2. **Asynchronous Task Queueing (Redis):** The API saves the raw file to MinIO `inbox-bucket`, pushes a job payload to a **Redis Message Queue**, and immediately returns a non-blocking `200 OK` response to the user.
+3. **Serverless Compliance & Redaction Engine:** Background Worker Pods (`functions-framework`) pull jobs from Redis, extract text (`pypdf`), and scan for global and Indian PII patterns (Aadhaar, PAN, SSN, Credit Cards, Passports, IFSC, UPI).
+4. **Automated PDF Masking & Redaction (PyMuPDF):** When PII is detected, the engine finds the exact coordinate bounding boxes of the sensitive text and **burns solid black redaction boxes** onto the PDF, outputting a safe `redacted_doc.pdf` to MinIO **`public-bucket`**.
+5. **Multi-Tier Storage & AES Encryption:**
+   - **Private Vault Tier:** Raw PDFs are encrypted using symmetric **AES-256** and archived in MinIO **`archive-bucket`**.
+   - **Public Viewing Tier:** Redacted PDFs are stored in MinIO **`public-bucket`** for safe viewing by staff.
+   - **Ingestion Purge:** Raw unencrypted files are permanently deleted from `inbox-bucket`.
+6. **Real-time NoSQL Indexing:** Compliance status and metadata are indexed in **Google Cloud Firestore** ($0 Spark Plan).
 
 ---
 
-## 2. Complete Architecture Diagram
+## 2. Updated Complete Architecture Diagram (Mermaid JS)
 
 ```mermaid
 flowchart TD
     subgraph DEV ["0. DevOps & Infrastructure as Code"]
         GH["GitHub Repository"] -->|git push| GHA["GitHub Actions CI/CD Pipeline"]
-        GHA -->|Automated Unit Tests| PYTEST["Python Regex PII Tests"]
-        TF["HashiCorp Terraform"] -->|Local IaC Provisioning| MINIO_RES["MinIO Buckets: inbox-bucket & archive-bucket"]
+        GHA -->|Automated Unit Tests| PYTEST["Pytest PII & Redaction Suite"]
+        TF["HashiCorp Terraform"] -->|Local IaC Provisioning| MINIO_RES["MinIO Buckets:\ninbox-bucket, archive-bucket, public-bucket"]
     end
 
-    subgraph EDGE ["1. On-Premises / Edge Sandbox (Local Laptop / VM)"]
-        UI["Web Frontend (HTML5 / CSS3 / Vanilla JS)"]
-        API["Flask Backend API (Docker Container)"]
-        UI -->|1. POST Upload PDF| API
+    subgraph EDGE ["1. Local Kubernetes Edge Cluster (Minikube)"]
+        UI["Web Portal UI\n(HTML5 / CSS3 / Vanilla JS)"]
+        API["Flask Backend API Container\n(NodePort: 30500)"]
+        UI -->|1. Upload PDF| API
         
-        API -->|2. S3/GCS API Upload| INBOX["MinIO Inbox Bucket (Standard Tier)"]
+        API -->|2. Save Raw File| INBOX["MinIO Inbox Bucket\n(Standard Landing Tier)"]
         
-        K8S["Local Kubernetes Cluster (K3s / Minikube)"]
-        K8S -.->|Orchestrates| API
-        K8S -.->|Orchestrates| FUNC
+        REDIS[("Redis Message Queue Container\nredis-service:6379")]
+        API -->|3. Push Job JSON| REDIS
         
-        FUNC["Serverless Scanner (Python functions-framework)"]
-        INBOX -->|3. Trigger Event| FUNC
+        WORKER["Serverless Worker Engine\n(functions-framework + PyMuPDF)"]
+        REDIS -->|4. Pull Job Async| WORKER
         
-        FUNC -->|4a. Extract Text & Regex PII Scan| FUNC
-        FUNC -->|4b. AES-256 Encrypt & Move| ARCHIVE["MinIO Archive Bucket (Cold Tier)"]
+        INBOX -->|5. Fetch PDF & Regex Scan| WORKER
+        WORKER -->|6a. AES-256 Encrypt Original| ARCHIVE["MinIO Archive Bucket\n(Cold Vault Tier)"]
+        WORKER -->|6b. Burn Black Boxes & Save| PUBLIC["MinIO Public Bucket\n(Redacted Viewing Tier)"]
+        WORKER -->|6c. Purge Raw Upload| INBOX
     end
 
-    subgraph CLOUD ["2. Public Cloud Tier (Google Cloud Platform / Firebase)"]
-        FS[("Google Cloud Firestore (NoSQL DB)\n- Firebase Spark Plan - $0")]
-        BQ[("Google BigQuery Sandbox\n- SQL Analytics Warehouse - $0")]
-        
-        FUNC -->|5. Write Metadata JSON| FS
-        FUNC -->|6. Stream Compliance Logs| BQ
-        UI <-->|7. Real-time Status Query| FS
+    subgraph CLOUD ["2. Public Cloud Tier (Google Firebase)"]
+        FS[("Cloud Firestore DB\nCollection: documents")]
+        WORKER -->|7. Write Metadata JSON| FS
+        API <-->|8. Query Live Audit History| FS
     end
 ```
 
@@ -70,99 +65,91 @@ flowchart TD
 
 ## 3. Technology Stack & Component Breakdown
 
-<table>
-  <tr><th>Layer</th><th>Selected Technology</th><th>Role in System</th></tr>
-  <tr><td>Frontend UI</td><td>HTML5, CSS3, Vanilla JavaScript</td><td>Pure client-side UI using native fetch() API for uploads and live status polling.</td></tr>
-  <tr><td>Backend API</td><td>Python Flask</td><td>Lightweight API server handling upload relays, containerized in Docker.</td></tr>
-  <tr><td>Local Object Storage</td><td>MinIO Container</td><td>S3/GCS-compatible object storage managing inbox-bucket and archive-bucket.</td></tr>
-  <tr><td>Serverless Compute</td><td>Python functions-framework</td><td>Event-driven microservice executing PDF parsing (pypdf), PII Regex, and AES encryption.</td></tr>
-  <tr><td>NoSQL Metadata DB</td><td>Google Cloud Firestore</td><td>Live cloud document database tracking document status on the Firebase Spark Plan ($0).</td></tr>
-  <tr><td>Data Warehouse</td><td>Google BigQuery Sandbox</td><td>Serverless SQL data warehouse for executing aggregate compliance analytical queries ($0).</td></tr>
-  <tr><td>Container Orchestration</td><td>Docker &amp; Kubernetes (K3s/Minikube)</td><td>Local microservice container management, deployments, and services configuration.</td></tr>
-  <tr><td>Infrastructure as Code</td><td>HashiCorp Terraform</td><td>Declarative HCL scripts automating local storage bucket creation and IAM policies.</td></tr>
-  <tr><td>CI/CD &amp; DevOps</td><td>GitHub &amp; GitHub Actions</td><td>Version control and automated Python testing pipelines for PII detection logic.</td></tr>
-</table>
+| Layer | Selected Technology | Role in System |
+| :--- | :--- | :--- |
+| **Frontend UI** | HTML5, CSS3, Vanilla JavaScript | Client-side UI using native `fetch()` API for drag-and-drop uploads and status polling. |
+| **Backend API** | Python Flask | Lightweight web server handling ingestion and Redis task dispatching. |
+| **Message Queue** | Redis Container | Asynchronous job queue (`redis-service:6379`) decoupling ingestion from processing. |
+| **Local Object Storage** | MinIO Engine | S3/GCS-compatible storage managing `inbox-bucket`, `archive-bucket`, and `public-bucket`. |
+| **Compliance Worker** | Python `functions-framework` | Serverless background worker pulling tasks from Redis. |
+| **Parsing & Inspection** | `pypdf` + Regex Engine | Extracts text streams and detects global/Indian PII (Aadhaar, PAN, SSN, UPI, Cards). |
+| **PDF Redaction Engine** | PyMuPDF (`fitz`) | Locates PII bounding box coordinates and burns solid black masking boxes onto PDF pages. |
+| **NoSQL Metadata DB** | Google Cloud Firestore | Real-time cloud document database tracking compliance audit logs ($0 Spark Plan). |
+| **Orchestration** | Kubernetes (Minikube) | Microservices container management, NodePort/ClusterIP services, and Secrets mounting. |
+| **Infrastructure as Code** | HashiCorp Terraform | Declarative HCL scripts provisioning storage buckets and S3 IAM access policies. |
+| **CI/CD & DevOps** | GitHub & GitHub Actions | Automated Python unit testing (`pytest`), Terraform syntax validation, and Docker builds. |
 
 ---
 
 ## 4. Syllabus Mapping & Academic Alignment
 
-<table>
-  <tr><th>Syllabus Unit</th><th>Practical Implementation in This Architecture</th></tr>
-  <tr><td>Unit-I: Cloud Architecture</td><td>Hybrid Cloud Model: On-premises edge infrastructure (Docker/MinIO) seamlessly integrated with public cloud database endpoints (Firestore / BigQuery).</td></tr>
-  <tr><td>Unit-II: Virtualization</td><td>OS &amp; Hypervisor Virtualization: Docker runtime execution hosting isolated containers, optionally running inside a VirtualBox Linux VM.</td></tr>
-  <tr><td>Unit-III: Cloud Services &amp; Containers</td><td>Microservices &amp; Serverless: Local Kubernetes cluster (K3s/Minikube) managing container deployments; Serverless event-driven execution via functions-framework.</td></tr>
-  <tr><td>Unit-IV: Cloud Storage &amp; Analytics</td><td>Data Tiering &amp; OLAP Analytics: Multi-tier storage (MinIO Standard vs Archive), NoSQL document indexing (Firestore), and Big Data SQL queries (BigQuery Sandbox).</td></tr>
-  <tr><td>Unit-V: DevOps &amp; Service Management</td><td>IaC &amp; CI/CD Pipelines: Infrastructure provisioning via Terraform scripts; Continuous Integration workflows via GitHub Actions.</td></tr>
-  <tr><td>Unit-VI: Security &amp; Networking</td><td>Least Privilege &amp; Data Protection: MinIO S3 JSON IAM policies, Firestore security rules, client-side AES encryption, .gitignore secret isolation, and $0 budget enforcement.</td></tr>
-</table>
+| Syllabus Unit | Practical Implementation in This Architecture |
+| :--- | :--- |
+| **Unit-I: Cloud Architecture** | **Hybrid Cloud Model:** Local Kubernetes Edge infrastructure integrated with Google Cloud Firestore. |
+| **Unit-II: Virtualization** | **OS & Container Virtualization:** Docker Engine hosting containerized services (Flask, MinIO, Redis, Worker). |
+| **Unit-III: Cloud Services & Containers** | **Microservices, Queuing & Serverless:** Local Kubernetes cluster (Minikube) orchestrating pods; **Redis Message Queue** for asynchronous processing; Serverless execution via `functions-framework`. |
+| **Unit-IV: Cloud Storage & Analytics** | **Multi-Tier Storage & Anonymization:** MinIO Standard Ingestion (`inbox`), AES Cold Vault (`archive`), and Redacted Public Tier (`public`); Firestore NoSQL document indexing. |
+| **Unit-V: DevOps & Service Management** | **IaC & CI/CD Pipelines:** HashiCorp Terraform bucket/IAM provisioning; Continuous Integration via GitHub Actions. |
+| **Unit-VI: Security & Data Privacy** | **Data Anonymization & Least Privilege:** Automatic PDF text blacking (Redaction), AES-256 encryption, MinIO S3 IAM JSON policies, Kubernetes Secrets (`firebase-secret`), $0 budget guarantee. |
 
 ---
 
-## 5. Sequential Master Execution Roadmap
+## 5. Master Execution Roadmap & Status
 
-### Phase 1: Local Cloud Baseline & Safety Setup *(COMPLETED)*
-
+### Phase 1: Local Baseline & Safety Setup *(COMPLETED)*
 - [x] Verified Git, Docker, Python 3, and Terraform CLI installations.
-- [x] Created Firebase Project on $0 Spark Plan (No Credit Card).
-- [x] Downloaded and secured `firebase-key.json` inside `.gitignore` secrets directory.
+- [x] Configured Google Firebase Firestore ($0 Spark Plan) and secured `firebase-key.json` in `.gitignore`.
 
-### Phase 2: Infrastructure as Code (Terraform + MinIO) *(COMPLETED & VERIFIED)*
+### Phase 2: Infrastructure as Code (Terraform + MinIO) *(COMPLETED)*
+- [x] Configured MinIO Object Storage (`http://localhost:9001`).
+- [x] Wrote `terraform/main.tf` provisioning `inbox-bucket` and `archive-bucket`.
 
-- [x] Created `docker-compose.yml` for local MinIO Object Storage (`http://localhost:9001`).
-- [x] Wrote `terraform/main.tf` using HashiCorp MinIO Provider.
-- [x] Executed `terraform apply` to provision `inbox-bucket` and `archive-bucket`.
+### Phase 3: Serverless Scanner & PII Detector Engine *(COMPLETED)*
+- [x] Built serverless scanner (`functions-framework` + `pypdf`).
+- [x] Implemented PII Regex detection (Aadhaar, PAN, SSN, Cards, Passports, UPI, DL, IFSC).
+- [x] Integrated AES-256 encryption and Firestore metadata indexing.
 
-### Phase 3: Serverless Document Scanner & PII Detector *(NEXT IMMEDIATE STEP)*
+### Phase 4: Edge Web Application (Flask + HTML/CSS/JS) *(COMPLETED)*
+- [x] Built Flask backend API (`app.py`).
+- [x] Created responsive HTML5/CSS3/Vanilla JS Web Portal.
 
-- [x] Set up Python `functions-framework` serverless microservice.
-- [x] Write PDF text extraction module using `pypdf`.
-- [x] Implement Regex scanning algorithms for:
-  - Credit Cards (16-digit pattern)
-  - Social Security / National IDs
-  - Sensitive keywords (`CONFIDENTIAL`, `RESTRICTED`, `PASSPORT`).
-- [x] Implement AES payload encryption before archiving files to `archive-bucket`.
-- [x] Connect Python scanner to Firestore to write compliance metadata JSON records.
+### Phase 5: Local Kubernetes Orchestration *(COMPLETED)*
+- [x] Containerized Docker images (`doc-app:v1`, `doc-scanner:v1`).
+- [x] Deployed and verified Kubernetes manifests (`k8s/`) on Minikube with Kubernetes Secrets.
 
-### Phase 4: Edge Web Application (Flask + HTML/CSS/JS)
+### Phase 6: Granular IAM Least Privilege Policies *(COMPLETED)*
+- [x] Provisioned S3 JSON IAM Policies (`UploaderPolicy` vs `ArchiverPolicy`) via Terraform.
 
-- [x] Build Flask backend API endpoints (`/upload`, `/status`).
-- [x] Build pure HTML5/CSS3/Vanilla JS frontend with drag-and-drop file upload.
-- [x] Connect JS `fetch()` calls to Flask API and live Firestore updates.
-- [x] Package Web Application into a standalone Docker container.
+### Phase 7: DevOps CI/CD Pipeline *(COMPLETED)*
+- [x] Created unit test suite (`tests/test_pii.py`) with `pytest`.
+- [x] Configured GitHub Actions workflow (`.github/workflows/ci.yml`).
 
-### Phase 5: Local Kubernetes (K3s / Minikube) Orchestration
+---
 
-- [x] Write Kubernetes manifest files:
-  - `deployment.yaml` for Flask Backend and Scanner microservices.
-  - `service.yaml` to expose NodePort/ClusterIP endpoints.
-  - `configmap.yaml` & `secret.yaml` for environment variable injection.
-- [x] Deploy and verify cluster health using `kubectl`.
+### Phase 8: Advanced Scope Upgrades (Redis Queue & PDF Redaction) *(NEXT IMMEDIATE STEP)*
 
-### Phase 6: Granular IAM Policies & BigQuery Analytics
+- [ ] **Step 8.1: Redis Task Queue Integration**
+  - Add Redis container service (`redis-service:6379`) to Docker Compose & Kubernetes.
+  - Update Flask API (`app.py`) to push upload jobs asynchronously into Redis queue (`scan_queue`).
+  - Update Scanner (`main.py`) to act as an asynchronous worker polling Redis (`blpop`).
 
-- [x] Write MinIO JSON IAM Access Policies (`UploaderPolicy` vs `ArchiverPolicy`).
-- [x] Write Firestore Granular Database Security Rules.
-- [ ] Enable BigQuery Sandbox ($0 Plan) and create compliance dataset.
-- [ ] Write SQL analytical queries for compliance reporting.
-
-### Phase 7: DevOps CI/CD & Final Project Verification
-
-- [x] Create GitHub repository and commit clean project structure.
-- [x] Write `.github/workflows/ci.yml` for automated Python unit testing on PII regex rules.
-- [x] End-to-end verification and preparation of project documentation and demo presentation.
+- [ ] **Step 8.2: PyMuPDF Automated PDF Redaction & Public Tier Output**
+  - Add `public-bucket` to Terraform IaC script (`terraform/main.tf`).
+  - Add `pymupdf` to `src/function/requirements.txt`.
+  - Implement PyMuPDF (`fitz`) redaction logic: find PII text coordinate rects and burn solid black boxes onto PDF.
+  - Save `redacted_<filename>.pdf` to MinIO `public-bucket`.
+  - Update Web UI (`index.html` & `app.js`) to provide a "Download Redacted PDF" button for scanned documents.
 
 ---
 
 ## 6. Daily Workstation Lifecycle Commands
 
-- **To start local cloud storage:**  
-`docker compose up -d`
-- **To provision storage buckets:**  
-`cd terraform && terraform apply -auto-approve`
-- **To clean shutdown at the end of the day:**  
-`cd terraform && terraform destroy -auto-approve && cd .. && docker compose down`
+- **Start Local Storage & Redis:** `docker compose up -d`
+- **Provision Storage Buckets:** `cd terraform && terraform apply -auto-approve`
+- **Start Kubernetes Cluster:** `minikube start && kubectl apply -f k8s/`
+- **Open Web App Portal:** `minikube service web-app-service`
+- **Clean Shutdown:** `kubectl delete -f k8s/ && minikube stop && cd terraform && terraform destroy -auto-approve && cd .. && docker compose down`
 
 ---
 
-*This document serves as our finalized, single source of truth for the entire project lifecycle.*
+*This document serves as our updated single source of truth for the complete project roadmap.*
