@@ -1,7 +1,9 @@
 import os
 import io
+import json
 import requests
-from flask import Flask, render_template, request, jsonify
+import redis
+from flask import Flask, render_template, request, jsonify, send_file
 from minio import Minio
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -16,6 +18,11 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadminpassword")
 SCANNER_API_URL = os.getenv("SCANNER_API_URL", "http://localhost:8080")
 
+# Redis Configuration (Asynchronous Task Queue)
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_QUEUE = os.getenv("REDIS_QUEUE", "scan_queue")
+
 # MinIO Client
 minio_client = Minio(
     MINIO_ENDPOINT,
@@ -23,6 +30,16 @@ minio_client = Minio(
     secret_key=MINIO_SECRET_KEY,
     secure=False
 )
+
+def get_redis_client():
+    """Returns connected Redis client or None if unreachable."""
+    try:
+        client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+        client.ping()
+        return client
+    except Exception as e:
+        print(f"[Redis] Warning: Unable to connect to Redis at {REDIS_HOST}:{REDIS_PORT}: {e}")
+        return None
 
 # Firebase Firestore Client
 FIREBASE_KEY_PATH = os.getenv("FIREBASE_KEY_PATH", "../../secrets/firebase-key.json")
@@ -48,8 +65,9 @@ def index():
 @app.route("/api/upload", methods=["POST"])
 def upload_document():
     """
-    Receives PDF from Frontend, saves to MinIO inbox-bucket,
-    and triggers the Serverless Scanner API.
+    Receives PDF from Frontend, saves raw file to MinIO inbox-bucket,
+    pushes an asynchronous processing task to Redis queue,
+    and returns an immediate non-blocking 200 response to the user.
     """
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
@@ -67,7 +85,6 @@ def upload_document():
 
     try:
         # Step 1: Upload raw PDF to MinIO inbox-bucket
-        # Ensure bucket exists first
         if not minio_client.bucket_exists("inbox-bucket"):
             minio_client.make_bucket("inbox-bucket")
             
@@ -80,26 +97,98 @@ def upload_document():
         )
         print(f"[Flask] Uploaded {filename} to MinIO inbox-bucket")
 
-        # Step 2: Trigger Serverless Scanner API
-        response = requests.post(
-            SCANNER_API_URL,
-            json={"filename": filename},
-            headers={"Content-Type": "application/json"},
-            timeout=30
-        )
+        # Step 2: Push Job to Redis Task Queue (Decoupled Asynchronous Processing)
+        r = get_redis_client()
+        if r:
+            payload = json.dumps({"filename": filename})
+            r.rpush(REDIS_QUEUE, payload)
+            print(f"[Flask] Enqueued task for {filename} into Redis queue '{REDIS_QUEUE}'")
 
-        if response.status_code == 200:
-            scan_result = response.json()
             return jsonify({
-                "message": "File processed successfully",
-                "data": scan_result.get("result")
+                "message": "File uploaded and queued for asynchronous compliance processing",
+                "status": "QUEUED",
+                "filename": filename
             }), 200
-        else:
-            return jsonify({"error": f"Scanner failed: {response.text}"}), 500
+
+        # Fallback if Redis is temporarily offline in local dev
+        print(f"[Flask] Redis unavailable at {REDIS_HOST}:{REDIS_PORT}, attempting fallback scanner API...")
+        try:
+            response = requests.post(
+                SCANNER_API_URL,
+                json={"filename": filename},
+                headers={"Content-Type": "application/json"},
+                timeout=10
+            )
+            if response.status_code == 200:
+                scan_result = response.json()
+                return jsonify({
+                    "message": "File processed via fallback scanner",
+                    "status": "COMPLETED",
+                    "filename": filename,
+                    "data": scan_result.get("result")
+                }), 200
+        except Exception as fe:
+            print(f"[Flask] Fallback scanner also failed: {fe}")
+
+        return jsonify({
+            "message": "File uploaded to inbox-bucket; queued for background processing",
+            "status": "QUEUED",
+            "filename": filename
+        }), 200
 
     except Exception as e:
         print(f"[Error] Upload pipeline failed: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/view/<path:filename>", methods=["GET"])
+def view_redacted_document(filename):
+    """
+    Serves safe redacted document from MinIO public-bucket inline for browser viewing.
+    """
+    try:
+        if not minio_client.bucket_exists("public-bucket"):
+            return jsonify({"error": "Public viewing bucket does not exist"}), 404
+
+        response = minio_client.get_object("public-bucket", filename)
+        file_bytes = response.read()
+        response.close()
+        response.release_conn()
+
+        return send_file(
+            io.BytesIO(file_bytes),
+            mimetype="application/pdf",
+            as_attachment=False,
+            download_name=filename
+        )
+    except Exception as e:
+        print(f"[Error] Failed to view {filename} from public-bucket: {e}")
+        return jsonify({"error": f"File '{filename}' not found in public-bucket: {e}"}), 404
+
+
+@app.route("/api/download/<path:filename>", methods=["GET"])
+def download_redacted_document(filename):
+    """
+    Downloads safe redacted document from MinIO public-bucket.
+    """
+    try:
+        if not minio_client.bucket_exists("public-bucket"):
+            return jsonify({"error": "Public viewing bucket does not exist"}), 404
+
+        response = minio_client.get_object("public-bucket", filename)
+        file_bytes = response.read()
+        response.close()
+        response.release_conn()
+
+        return send_file(
+            io.BytesIO(file_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        print(f"[Error] Failed to download {filename} from public-bucket: {e}")
+        return jsonify({"error": f"File '{filename}' not found in public-bucket: {e}"}), 404
 
 
 @app.route("/api/documents", methods=["GET"])

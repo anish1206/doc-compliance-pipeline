@@ -6,5 +6,7 @@ metadata:
 data:
   MINIO_ENDPOINT: "host.docker.internal:9000"
   SCANNER_API_URL: "http://scanner-service:8080"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_QUEUE: "scan_queue"
   FIREBASE_KEY_PATH: "/secrets/firebase-key.json"
-

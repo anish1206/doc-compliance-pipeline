@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Local Object Storage (GCS/S3 replacement)
+  # 1. Local Object Storage (MinIO - S3/GCS replacement for inbox, archive & public buckets)
   minio:
     image: minio/minio:latest
     container_name: local-cloud-storage
@@ -14,6 +14,56 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+
+  # 2. Asynchronous Message Queue (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-queue
+    ports:
+      - "6379:6379"
+
+  # 3. Serverless Compliance Scanner & PyMuPDF Redaction Worker
+  scanner:
+    build:
+      context: ./src/function
+    container_name: compliance-scanner
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadminpassword
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_QUEUE=scan_queue
+      - FIREBASE_KEY_PATH=/secrets/firebase-key.json
+    volumes:
+      - ./src/function:/function
+      - ./secrets:/secrets:ro
+    depends_on:
+      - minio
+      - redis
+
+  # 4. Web Application Portal (Flask API + HTML5/CSS3 UI)
+  web-app:
+    build:
+      context: ./src/app
+    container_name: compliance-web-app
+    ports:
+      - "5000:5000"
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadminpassword
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_QUEUE=scan_queue
+      - SCANNER_API_URL=http://scanner:8080
+      - FIREBASE_KEY_PATH=/secrets/firebase-key.json
+    volumes:
+      - ./src/app:/app
+      - ./secrets:/secrets:ro
+    depends_on:
+      - minio
+      - redis
 
 volumes:
   minio_data:

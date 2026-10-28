@@ -476,6 +476,14 @@ a {
     padding: 0 var(--space-lg);
 }
 
+.tile__inner--wide,
+#audit .tile__inner {
+    max-width: 96%;
+    width: 96%;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
 .tile__inner--centered {
     text-align: center;
     display: flex;
@@ -677,20 +685,22 @@ a {
     -webkit-overflow-scrolling: touch;
     border-radius: var(--rounded-lg);
     border: 1px solid var(--color-hairline);
+    background-color: var(--color-canvas);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 640px;
+    table-layout: auto;
 }
 
 .data-table thead {
-    background-color: var(--color-canvas);
+    background-color: var(--color-canvas-parchment);
 }
 
 .data-table th {
-    padding: var(--space-sm) var(--space-lg);
+    padding: 14px 16px;
     text-align: left;
     font-size: var(--size-caption);
     font-weight: 600;
@@ -702,15 +712,23 @@ a {
 }
 
 .data-table td {
-    padding: var(--space-md) var(--space-lg);
-    font-size: var(--size-body);
+    padding: 14px 16px;
+    font-size: 14px;
     font-weight: 400;
-    line-height: 1.47;
-    letter-spacing: -0.374px;
+    line-height: 1.45;
+    letter-spacing: -0.2px;
     color: var(--color-ink);
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
     vertical-align: middle;
 }
+
+/* Explicit column proportions ensuring everything is visible without horizontal scrolling */
+.data-table th:nth-child(1), .data-table td:nth-child(1) { width: 20%; word-break: break-all; } /* Filename */
+.data-table th:nth-child(2), .data-table td:nth-child(2) { width: 11%; white-space: nowrap; }   /* Classification */
+.data-table th:nth-child(3), .data-table td:nth-child(3) { width: 31%; }                        /* Detected PII */
+.data-table th:nth-child(4), .data-table td:nth-child(4) { width: 9%; white-space: nowrap; }   /* File Size */
+.data-table th:nth-child(5), .data-table td:nth-child(5) { width: 13%; white-space: nowrap; }   /* Processed At */
+.data-table th:nth-child(6), .data-table td:nth-child(6) { width: 16%; white-space: nowrap; }   /* Public Viewing Tier */
 
 .data-table tbody tr:last-child td {
     border-bottom: none;

@@ -1,0 +1,25 @@
+Enterprise organizations (banks, law firms, healthcare providers) receive thousands of unstructured documents daily (scanned IDs, invoices, loan applications, contracts).
+
+Under international privacy regulations (GDPR, HIPAA), storing unencrypted Personally Identifiable Information (PII)—such as Credit Card numbers or Social Security Numbers (SSNs)—in unmonitored storage violates compliance laws and results in severe regulatory fines.
+
+To overcome this issue, our project is Doc Compliance Platform.
+
+Components used from the syllabus
+
+1.It is SaaS platform. It is a hybrid topology where on-premises edge infrastructure (local Kubernetes/MinIO) integrates securely with a public cloud database (Google Cloud Firestore)
+
+2. Replaced 24/7 monolithic server processing with decoupled, event-driven microservices
+
+3. We utilized OS-level container virtualization to guarantee consistent application runtimes, paired with storage virtualization via MinIO to simulate cloud object stores.
+
+4. We demonstrated modern cloud-native compute by running Google's serverless Cloud Functions framework alongside Kubernetes microservices orchestration.
+
+5. Used MinIO (S3/GCS API compatible) to store unstructured PDF files across standard and archive buckets.
+Integrated Google Cloud Firestore (the evolution of Cloud Datastore) as a managed NoSQL document store to index JSON metadata records in a documents collection.
+Unstructured binary payloads (PDF files) reside in object storage; structured, queryable metadata (classifications, PII tags, timestamps) resides in NoSQL Firestore.
+Implemented automated lifecycle movement: raw landing tier (inbox-bucket) transitions into an encrypted cold archive tier (archive-bucket), with raw uploads purged immediately.
+We solved the storage optimization challenge by pairing unstructured object storage with a managed NoSQL document database, applying automated cold storage tiering.
+
+6. Our project follows enterprise DevOps best practices by replacing manual configuration with Terraform IaC, automated GitHub Actions testing, and strict IAM least-privilege policies.
+
+7. We demonstrated cloud networking and zero-trust security by isolating background processing on private ClusterIP networks, while securing data both in transit and at rest.

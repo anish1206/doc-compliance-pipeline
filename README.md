@@ -17,7 +17,7 @@ This project implements an automated, secure **Hybrid Cloud Compliance & Analyti
 
 ---
 
-## 2. Complete Architecture Diagram (Mermaid JS)
+## 2. Complete Architecture Diagram
 
 ```mermaid
 flowchart TD
@@ -61,7 +61,6 @@ flowchart TD
   <tr><td>Local Object Storage</td><td>MinIO Container</td><td>S3/GCS-compatible object storage managing inbox-bucket and archive-bucket.</td></tr>
   <tr><td>Serverless Compute</td><td>Python functions-framework</td><td>Event-driven microservice executing PDF parsing (pypdf), PII Regex, and AES encryption.</td></tr>
   <tr><td>NoSQL Metadata DB</td><td>Google Cloud Firestore</td><td>Live cloud document database tracking document status on the Firebase Spark Plan ($0).</td></tr>
-  <tr><td>Data Warehouse</td><td>Google BigQuery Sandbox</td><td>Serverless SQL data warehouse for executing aggregate compliance analytical queries ($0).</td></tr>
   <tr><td>Container Orchestration</td><td>Docker &amp; Kubernetes (K3s/Minikube)</td><td>Local microservice container management, deployments, and services configuration.</td></tr>
   <tr><td>Infrastructure as Code</td><td>HashiCorp Terraform</td><td>Declarative HCL scripts automating local storage bucket creation and IAM policies.</td></tr>
   <tr><td>CI/CD &amp; DevOps</td><td>GitHub &amp; GitHub Actions</td><td>Version control and automated Python testing pipelines for PII detection logic.</td></tr>

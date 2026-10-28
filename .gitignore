@@ -55,6 +55,7 @@ override.tf.json
 
 # IDE and OS files
 .vscode/
+.archify/
 .idea/
 src/design.md
 .DS_Store

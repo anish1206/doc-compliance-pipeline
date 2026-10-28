@@ -126,14 +126,14 @@ flowchart TD
 
 ---
 
-### Phase 8: Advanced Scope Upgrades (Redis Queue & PDF Redaction) *(NEXT IMMEDIATE STEP)*
+### Phase 8: Advanced Scope Upgrades (Redis Queue & PDF Redaction) *(COMPLETED)*
 
-- [ ] **Step 8.1: Redis Task Queue Integration**
+- [x] **Step 8.1: Redis Task Queue Integration**
   - Add Redis container service (`redis-service:6379`) to Docker Compose & Kubernetes.
   - Update Flask API (`app.py`) to push upload jobs asynchronously into Redis queue (`scan_queue`).
   - Update Scanner (`main.py`) to act as an asynchronous worker polling Redis (`blpop`).
 
-- [ ] **Step 8.2: PyMuPDF Automated PDF Redaction & Public Tier Output**
+- [x] **Step 8.2: PyMuPDF Automated PDF Redaction & Public Tier Output**
   - Add `public-bucket` to Terraform IaC script (`terraform/main.tf`).
   - Add `pymupdf` to `src/function/requirements.txt`.
   - Implement PyMuPDF (`fitz`) redaction logic: find PII text coordinate rects and burn solid black boxes onto PDF.
